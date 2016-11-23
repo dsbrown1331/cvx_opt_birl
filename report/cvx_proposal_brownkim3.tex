@@ -1,0 +1,58 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\author{Daniel Brown and Dohyun Kim}
+\title{Exploration of Different Gradient Descent Methods for Bayesian Inverse Reinforcement Learning}
+\begin{document}
+\maketitle
+
+\section{Introduction}
+Markov Decision Processes (MDPs) are a commonly used model for sequential decision making tasks. Many different methods including as dynamic programming and temporal difference methods have been proposed to allow a learning agent to solve for the optimal policy of an MDP. However, in some tasks it can be hard to specify a reward function and may be easier to provide demonstrations. This leads to the problem of Inverse Reinforcement Learning (IRL) \cite{ng2000algorithms}. Given an MDP$\setminus$R (an MDP without a specified reward function), and a set of demonstrations consisting of state-action pairs, we wish to recover the reward function that makes the demonstrations optimal. 
+
+Many approaches have been proposed to solve this problem. We choose to focus on the Bayesian IRL setting \cite{ramachandran2007bayesian}. Gradient methods have been proposed to solve this problem \cite{lopes2009active,choi2011map} but contain no details about the specifics of how to perform gradient descent. We seek to find the MAP estimate of the true reward by maximizing the posterior of the reward $R$ given a set of demonstrations $D$ where
+\begin{equation}
+P(R | D) \propto P(D | R) P(R)
+\end{equation}
+The likelihood $P(D|R)$ is defined in a form of softmax function \cite{sutton1998reinforcement} as 
+\begin{equation}
+P(D | R) = \frac{e^{\alpha \sum_i Q^*(s_i,a_i;R)}}{\sum_{b \in A} e^{\alpha \sum_i Q^*(s_i,b;R)}}
+\end{equation}
+where $Q^*(s,a; R)$ is the optimal Q-value function for reward $R$ and $\alpha$ is a confidence parameter defining how reliable the demonstrations are. The prior $P(R)$ can be any function. 
+
+We want to use gradient ascent to update to find 
+\begin{equation}
+R_{MAP} = \arg \max_R  P(R | D) = \arg \max_R [\log(P(D|R) + \log P(R)]
+\end{equation}
+ reward function to maximize the posterior, thus our update takes the form
+\begin{equation}
+R_{new} \leftarrow R + \eta_t \nabla_R [\log(P(D|R) + \log P(R)]
+\end{equation}
+
+We propose to explore some of the different flavors of gradient descent we have discussed in class as they apply to the problem of solving the IRL problem.
+
+\section{Approach}
+We propose to investigate a simple, yet scalable navigation domain where a subset of states have negative reward (obstacles) most states have zero reward and the goal state has positive reward. Given a few demonstration trajectories, we wish to recover the reward using gradient descent.
+
+We propose to investigate the following gradient descent methods: standard gradient descent (GD) with full step size, GD with BTLS, and accelerated GD.
+
+We also hope to also investigate whether using a sparsity-inducing l1 regularization term can help find a sparse reward function that matches the demonstrator's reward. We will compare the Frank-Wolfe, and subgradient descent methods to maximize the likelihood minus the regularization. 
+
+
+
+
+\section{To Do List}
+First we need a way to generate navigation tasks. We will develop a simple grid world simulator where there are a finite number of cells on a map that a robot can drive on. Certain cells will contain dangerous terrain that should be avoided and one cell will be the goal location. This domain can easily be scaled up or down as needed by increasing the number of states.
+
+We also need to compute a closed form expression for the gradient of the BIRL likelihood function for performing gradient descent. To compute the gradient we need a way to solve for the optimal policy given a hypothesis reward function. We will implement the policy iteration algorithm to accomplish this task. 
+
+We will then proceed to experiment with different methods for choosing the step size and ways of adding sparsity as mentioned above. 
+
+We will show plots of the error between the learned reward and the true reward as well as the error between the policy performance between the optimal policy and the policy corresponding to the learned reward. We will compare the number of iterations required to achieve low error as well as the computation time needed. Due to the requirement to solve an MDP at every step, it will be important to see which methods can reduce the error in the least amount of gradient steps, thus we hypothesize that BTLS and accelerated methods will improve upon standard gradient descent techniques. Additionally, we hypothesize that adding a regularization term will allow gradient descent to find a better reward function that matches our sparse domain.
+
+\bibliographystyle{plain}
+\bibliography{proposal.bib}
+
+
+\end{document}
