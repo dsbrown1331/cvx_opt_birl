@@ -22,21 +22,13 @@ def demo_log_likelihood(demo, Q_star, eta=1.0):
     return np.sum([sa_log_likelihood(s,a,Q_star,eta) for s,a in demo])
     
     
-def partial_Q_wrt_R(s,a,i, mdp, pi_star):
+def partial_Q_wrt_R(s,a,i, mdp, pi_star,Wa):
     """partial derivative of Q(s,a) with respect to R_i"""
-    #TODO vectorize this so I don't keep computing the inverse!
-    #print s,a,"demo"
-    num_states, num_actions = mdp.num_states, mdp.num_actions
-    T_pi = np.array([np.dot(pi_star[x], mdp.T[x]) for x in range(num_states)])
-    #print "T_pi"
-    #print T_pi
-    #TODO check on inverse for better numerical stability         
-    W = np.dot(mdp.T[:,a,:], np.linalg.inv(np.eye(mdp.num_states) - mdp.gamma * T_pi))
     #print "T_"+str(a)
     #print mdp.T[:,a,:]
     #print "W"
     #print W
-    partial_deriv = mdp.gamma * W[s,i]
+    partial_deriv = mdp.gamma * Wa[s,i]
     if i == s:
         partial_deriv += 1.0 
     #print s,a,"demo"
@@ -54,14 +46,24 @@ def calc_reward_gradient(demo, mdp_r, R, eta=1.0):
     Q_star = mdp_solver.calc_qvals(mdp, pi_star, V_star, mdp.gamma)
     #calculate gradient of R (|s|x1 vector of rewards per state)
     gradient = np.zeros((num_states, 1))
+    
+    #precompute (I-\gammaT^\pi)^-1
+    num_states, num_actions = mdp.num_states, mdp.num_actions
+    T_pi = np.array([np.dot(pi_star[x], mdp.T[x]) for x in range(num_states)])
+    #print "T_pi"
+    #print T_pi
+    #TODO check on inverse for better numerical stability         
+    Ws = [np.dot(mdp.T[:,a,:], np.linalg.inv(np.eye(mdp.num_states) - mdp.gamma * T_pi)) for a in range(num_actions)]
+    
+    
     for i in range(num_states): #iterate over reward elements
         r_i_grad = 0
         for s,a in demo: #iterate over demonstrations   
             #print s,a,"demo pair"
-            deriv_log_num = eta * partial_Q_wrt_R(s,a,i,mdp,pi_star)
+            deriv_log_num = eta * partial_Q_wrt_R(s,a,i,mdp,pi_star,Ws[a])
             deriv_log_denom = 1.0/np.sum(np.exp(eta * Q_star[s,:])) \
                     * np.sum([np.exp(eta * Q_star[s,b]) * eta
-                    * partial_Q_wrt_R(s,b,i,mdp,pi_star)
+                    * partial_Q_wrt_R(s,b,i,mdp,pi_star,Ws[b])
                     for b in range(num_actions)])
             #print "deriv_log_num",deriv_log_num
             #print "deriv_log_denom", deriv_log_denom

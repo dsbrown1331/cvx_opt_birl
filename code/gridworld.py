@@ -6,8 +6,10 @@ class GridWorld():
         self.num_actions = 4
         #print self.num_actions
         self.rows = len(reward)
+        #print "num rows", self.rows
         #print self.rows
         self.cols = len(reward[0])
+        #print "num cols", self.cols
         #print self.cols
         self.num_states = self.cols * self.rows
         self.terminals = terminals
