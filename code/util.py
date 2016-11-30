@@ -16,7 +16,9 @@ def print_reward(mdp):
 def print_policy(mdp, pi):
     count = 0
     for r in (range(mdp.rows)):
+        #print r
         for c in (range(mdp.cols)):
+            #print c
             if count in mdp.terminals:
                 print '.',
             else:

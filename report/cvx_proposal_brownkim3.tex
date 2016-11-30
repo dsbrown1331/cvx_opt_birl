@@ -32,6 +32,33 @@ R_{new} \leftarrow R + \eta_t \nabla_R [\log(P(D|R) + \log P(R)]
 
 We propose to explore some of the different flavors of gradient descent we have discussed in class as they apply to the problem of solving the IRL problem.
 
+\section{Gradient Computation}
+We first considered just the maximum likelihood estimate of the reward (corresponding to a uniform prior). To perform gradient descent we need to find the gradient of the likelihood function. We have 
+\begin{eqnarray}
+\nabla_R \log P(D | R) = \nabla_R \log \prod_{(s,a) \in D} P(a | s, R) \\
+=\sum_{(s,a) \in D} \nabla_R \log \frac{e^{\alpha Q_R^*(s,a)}}{\sum_{b \in A} e^{\alpha Q_R^*(s,b)}}\\
+= \sum_{(s,a) \in D} \nabla_R \alpha Q_R^*(s,a) - \log \sum_{b \in A} e^{\alpha Q_R^*(s,b)}\\
+= \sum_{(s,a) \in D} \alpha \nabla_R Q_R^*(s,a) - \frac{\alpha}{Z_a}\bigg(\sum_{b \in A} e^{\alpha Q_R^*(s,b)} \nabla_R Q_R^*(s,b)\bigg)\\
+\end{eqnarray}
+
+where 
+\begin{equation}
+Z_a = \sum_{b \in A} e^{\alpha Q^*(s,b|R)}
+\end{equation}
+To compute $\nabla_R Q^*_R(s,u)$ for some action $u$, we note that 
+\begin{equation}
+V^{\pi} = R + \gamma T^{\pi} V^{\pi}
+\end{equation}
+so 
+\begin{equation}
+Q^*_u = R + \gamma T^a V^{\pi^*} = R + \gamma T^a(I - \gamma T^{\pi^*})^{-1}R
+\end{equation}
+and
+\begin{eqnarray}
+\frac{\partial Q(s,u)}{\partial R_i} = \delta_i(s) + \gamma W(s,i)
+\end{eqnarray}
+where $W = T^a(I - \gamma T^{\pi^*})^{-1}$
+
 \section{Approach}
 We propose to investigate a simple, yet scalable navigation domain where a subset of states have negative reward (obstacles) most states have zero reward and the goal state has positive reward. Given a few demonstration trajectories, we wish to recover the reward using gradient descent.
 

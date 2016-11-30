@@ -2,18 +2,15 @@ import numpy as np
 import mdp_solver
 import gridworld
 import util
-import birl_optimized as birl
+import birl
 
 ##test script for running gradient descent for bayesian inverse reinforcement learning
 ##domain is a simple grid world (see gridworld.py)
 ##TODO I haven't incorporated a prior so this really is more of a maximum likelihood rather than bayesian irl algorithm
 
-reward = [[0, 0,0,-1,0, 0,0],
-          [0,-1,0,-1,0,-1,0],
-          [0,-1,0,-1,0,-1,0],
-          [1,-1,0, 0,0,-1,0]] #true expert reward
-terminals = [21] #no terminals, you can change this if you want
-gamma = 0.95 #discount factor for mdp
+reward = [[0,0,0,-1,0],[0,-1,0,-1,0],[1,-1,0,0,0]] #true expert reward
+terminals = [10] #no terminals, you can change this if you want
+gamma = 0.9 #discount factor for mdp
 grid = gridworld.GridWorld(reward, terminals, gamma) #create grid world
 print "expert reward"
 util.print_reward(grid)
@@ -34,20 +31,16 @@ print "demonstration", demo
 
 
 ####### gradient descent starting from random guess at expert's reward
-reward_guess = np.reshape([np.random.randint(-1,2) for _ in range(grid.num_states)],(grid.rows,grid.cols))
-#reward_guess = np.zeros((grid.rows,grid.cols))
-print "reward init", reward_guess
+reward_guess = np.reshape([np.random.randint(-10,10) for _ in range(grid.num_states)],(grid.rows,grid.cols))
 
 #create new mdp with reward_guess as reward
 mdp = gridworld.GridWorld(reward_guess, terminals, gamma) #create markov chain
 
-lam = 0.5 #regularization term
-num_steps = 300
-#step_size = 0.1 #we should experiment with step sizes
-c = 1.0 #decreasing stepsize
+
+num_steps = 100
+step_size = 1.0 #we should experiment with step sizes
 print "----- gradient descent ------"
 for step in range(num_steps):
-    print "iter",step
     #calculate optimal policy for current estimate of reward
     pi, V = mdp_solver.policy_iteration(mdp)
     #print "new policy"
@@ -58,13 +51,10 @@ for step in range(num_steps):
     #print log-likelihood
     print "log-likelihood posterior", birl.demo_log_likelihood(demo, Q)
 
-    #calculate subgradient of posterior wrt reward minus l1 regularization on the reward
-    subgrad = birl.calc_l1regularized_reward_gradient(demo, mdp, mdp.R, lam, eta=1.0)
-    #update stepsize
-    step_size = c / np.sqrt(step + 1)
-    print "stepsize", step_size
+    #calculate gradient of posterior wrt reward
+    grad = birl.calc_reward_gradient(demo, mdp, mdp.R, eta=1.0)
     #update reward
-    R_new = mdp.R + step_size * subgrad
+    R_new = mdp.R + step_size * grad
     #print "new reward"
     #print R_new
     #update mdp with new reward 
@@ -77,5 +67,3 @@ print "resulting optimal policy"
 util.print_policy(mdp, pi)
 print "policy difference"
 print np.linalg.norm(pi_star - pi)
-print "l1 norm of reward"
-print np.linalg.norm(mdp.R,1)
