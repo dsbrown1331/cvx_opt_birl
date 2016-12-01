@@ -2,13 +2,14 @@ import numpy as np
 import mdp_solver
 import gridworld
 import util
-import birl
+import birl_optimized as birl
 
 ##test script for running gradient descent for bayesian inverse reinforcement learning
 ##domain is a simple grid world (see gridworld.py)
 ##TODO I haven't incorporated a prior so this really is more of a maximum likelihood rather than bayesian irl algorithm
-
-reward = [[0,0,0,-1,0],[0,-1,0,-1,0],[1,-1,0,0,0]] #true expert reward
+rows = 10
+cols = 10
+reward = np.reshape([np.random.randint(-10,10) for _ in range(rows*cols)],(rows,cols)) #true expert reward
 terminals = [10] #no terminals, you can change this if you want
 gamma = 0.9 #discount factor for mdp
 grid = gridworld.GridWorld(reward, terminals, gamma) #create grid world
@@ -37,8 +38,8 @@ reward_guess = np.reshape([np.random.randint(-10,10) for _ in range(grid.num_sta
 mdp = gridworld.GridWorld(reward_guess, terminals, gamma) #create markov chain
 
 
-num_steps = 100
-step_size = 1.0 #we should experiment with step sizes
+num_steps = 200
+step_size = 0.5 #we should experiment with step sizes
 print "----- gradient descent ------"
 for step in range(num_steps):
     #calculate optimal policy for current estimate of reward

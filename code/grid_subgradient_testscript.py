@@ -8,10 +8,10 @@ import birl_optimized as birl
 ##domain is a simple grid world (see gridworld.py)
 ##TODO I haven't incorporated a prior so this really is more of a maximum likelihood rather than bayesian irl algorithm
 
-reward = [[0, 0,0,-1,0, 0,0],
-          [0,-1,0,-1,0,-1,0],
-          [0,-1,0,-1,0,-1,0],
-          [1,-1,0, 0,0,-1,0]] #true expert reward
+reward = [[0, 0, 0,-1, 0, 0, 0],
+          [0,-1, 0,-1, 0,-1, 0],
+          [0,-1, 0,-1, 0,-1, 0],
+          [1,-1, 0, 0, 0,-1, 0]] #true expert reward
 terminals = [21] #no terminals, you can change this if you want
 gamma = 0.95 #discount factor for mdp
 grid = gridworld.GridWorld(reward, terminals, gamma) #create grid world
@@ -36,12 +36,16 @@ print "demonstration", demo
 ####### gradient descent starting from random guess at expert's reward
 reward_guess = np.reshape([np.random.randint(-1,2) for _ in range(grid.num_states)],(grid.rows,grid.cols))
 #reward_guess = np.zeros((grid.rows,grid.cols))
+#reward_guess = np.ones((grid.rows,grid.cols))
 print "reward init", reward_guess
 
 #create new mdp with reward_guess as reward
 mdp = gridworld.GridWorld(reward_guess, terminals, gamma) #create markov chain
 
-lam = 0.5 #regularization term
+lam = 0.0 #regularization term
+
+writer = open('test_file.txt','w')
+writer.write("hi\n")
 num_steps = 300
 #step_size = 0.1 #we should experiment with step sizes
 c = 1.0 #decreasing stepsize
@@ -61,7 +65,7 @@ for step in range(num_steps):
     #calculate subgradient of posterior wrt reward minus l1 regularization on the reward
     subgrad = birl.calc_l1regularized_reward_gradient(demo, mdp, mdp.R, lam, eta=1.0)
     #update stepsize
-    step_size = c / np.sqrt(step + 1)
+    step_size = c / np.sqrt(step + 2)
     print "stepsize", step_size
     #update reward
     R_new = mdp.R + step_size * subgrad
@@ -69,6 +73,8 @@ for step in range(num_steps):
     #print R_new
     #update mdp with new reward 
     mdp.set_reward(R_new)
+    writer.write(str(step) + "\t" + str(step_size) + "\n")
+writer.close()
 
 print "recovered reward"
 util.print_reward(mdp)
