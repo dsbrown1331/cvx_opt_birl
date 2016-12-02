@@ -46,7 +46,7 @@ def run_experiment(size):
     mdp = gridworld.GridWorld(reward_guess, terminals, gamma) #create markov chain
 
     start = timeit.default_timer()
-    num_steps = 200
+    num_steps = 10
     c = 0.5 #we should experiment with step sizes
     print "----- gradient descent ------"
     for step in range(num_steps):
@@ -87,6 +87,6 @@ def run_experiment(size):
 
 
 size = range(2,31)
-num_cores = multiprocessing.cpu_count()
+num_cores = 2#multiprocessing.cpu_count()
 Parallel(n_jobs=num_cores)(delayed(run_experiment)(s) for s in size)
 

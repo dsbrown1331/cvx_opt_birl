@@ -3,6 +3,10 @@
 \usepackage{amsmath}
 \usepackage{amsfonts}
 \usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
+
 \author{Daniel Brown and Dohyun Kim}
 \title{Exploration of Different Gradient Descent Methods for Bayesian Inverse Reinforcement Learning}
 \begin{document}
@@ -43,7 +47,7 @@ We first considered just the maximum likelihood estimate of the reward (correspo
 
 where 
 \begin{equation}
-Z_a = \sum_{b \in A} e^{\alpha Q^*(s,b|R)}
+Z_a = \sum_{b \in A} e^{\alpha Q_R^*(s,b)}
 \end{equation}
 To compute $\nabla_R Q^*_R(s,u)$ for some action $u$, we note that 
 \begin{equation}
@@ -66,7 +70,68 @@ We propose to investigate the following gradient descent methods: standard gradi
 
 We also hope to also investigate whether using a sparsity-inducing l1 regularization term can help find a sparse reward function that matches the demonstrator's reward. We will compare the Frank-Wolfe, and subgradient descent methods to maximize the likelihood minus the regularization. 
 
+\section{Results}
+\subsection{Recovering a sparse reward}
+We noticed that even though gradient ascent usually recovers the optimal policy, the reward it finds is rarely sparse. However, in many sequential decision making tasks the reward is sparse. To try to better recover the expert's true reward when the reward is known to be sparse we added an $L^1$-norm regularization. Our new objective function is 
+\begin{equation}
+\max_R \log P(D|R) - \lambda \|R\|_1
+\end{equation}
 
+To test this method out we designed a simple $4\times 7$ grid navigation task where there is a winding path of smooth ground where travel costs are zero and patches of rough ground where travel costs are -1, there is also a terminal goal state with a reward of +1 in the top left corner. The true reward is shown in Figure~\ref{subfig:true_sparse_reward}. We optimized the regularized objective using subgradient descent for different values of the regularization parameter $\lambda$.
+
+\begin{figure}
+    \centering
+    \begin{subfigure}[b]{0.45\textwidth}
+        \includegraphics[width=\textwidth]{figs/true_reward.png}
+        \caption{True sparse reward used by demonstrator}
+        \label{subfig:true_sparse_reward}
+    \end{subfigure}
+    ~ %add desired spacing between images, e. g. ~, \quad, \qquad, \hfill etc. 
+      %(or a blank line to force the subfigure onto a new line)
+    \begin{subfigure}[b]{0.45\textwidth}
+        \includegraphics[width=\textwidth]{figs/recovered_reward_lam0_5.png}
+        \caption{Recovered reward using regularization with $\lambda = 0.5$}
+        \label{subfig:recovered_sparse_reward}
+    \end{subfigure}
+    \caption{True and recovered sparse reward. Sparse reward is learned using subgradient descent.}\label{fig:sparse_reward}
+\end{figure}
+
+Figure~\ref{fig:regularization_test} shows the results. We see if Figure~\ref{subfig:reg_L1-norm} that, as expected, higher regularization results in lower $L^1$-norm of the learned reward. We also see in Figure~\ref{subfig:reg_reward_diff} that using a larger regularization term results in a recovered reward that is much closer to that of the experts. Figure~\ref{subfig:reg_policy_diff} shows that too much regularization ($\lambda = 1.0$) causes the algorithm to find a sparse reward that does not result in a good policy, while a regularization term of $\lambda = 0.5$ seems to do best in terms of recovering a sparse reward that still induces a policy that matches the expert. We have plotted a heatmap of the learned reward when $\lambda=0.5$ in Figure~\ref{subfig:recovered_sparse_reward}. The regularization helps the algorithm to find a reward that is close to zero along the path and has non-zero rewards at the goal and along the rougher terrain.
+
+ Interestingly, the tests run with smaller regularization terms immediately found rewards that produced the expert's policy, which is why the lines are not visible in Figure~\ref{subfig:reg_policy_diff}; however, using these smaller regularization terms resulted in a type of reward overfitting, where non-sparse rewards were learned to try to maximize the likelihood of the demonstrations.
+
+
+\begin{figure}
+    \centering
+    \begin{subfigure}[b]{0.65\textwidth}
+        \includegraphics[width=\textwidth]{figs/reward_norm_reg_test.png}
+        \caption{$L^1$-norm of learned reward function.}
+        \label{subfig:reg_L1-norm}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.65\textwidth}
+        \includegraphics[width=\textwidth]{figs/reward_diff_reg_test.png}
+        \caption{Error between true reward and recovered reward.}
+        \label{subfig:reg_reward_diff}
+    \end{subfigure}
+    ~ %add desired spacing between images, e. g. ~, \quad, \qquad, \hfill etc. 
+      %(or a blank line to force the subfigure onto a new line)
+    
+    \begin{subfigure}[b]{0.65\textwidth}
+        \includegraphics[width=\textwidth]{figs/policy_diff_reg_test.png}
+        \caption{Difference between expert policy and learned policy.}
+        \label{subfig:reg_policy_diff}
+    \end{subfigure}
+    \caption{Evaluation of subgradient ascent for different regularization parameters as a function of number of steps.}\label{fig:regularization_test}
+\end{figure}
+
+Our results show adding regularization is a way to recover a sparse reward from expert demonstrations. This could be useful in cases where it is known that the domain has only sparse rewards, as well as in general cases as a type of Occam's razor that prefers simpler (sparse) rewards to explain an expert's behavior.
+ 
+\subsection{Stochastic Gradient Descent}
+We had initially hoped to use Stochastic Gradient Descent to try to reduce the computation cost of computing the gradient. As derived above, the gradient is of the form 
+\begin{eqnarray}
+\nabla_R \log P(D | R) = \sum_{(s,a) \in D} \bigg(\alpha \nabla_R Q_R^*(s,a) - \frac{\alpha}{Z_a}\bigg(\sum_{b \in A} e^{\alpha Q_R^*(s,b)} \nabla_R Q_R^*(s,b)\bigg) \bigg).
+\end{eqnarray}
+At first glance, this appears to be amenable to stochastic gradient descent, since the gradient is a sum of gradients with respect to each state-action pair in the demonstration $D$. However, there is an implicit coupling because of the need to compute the optimal Q-values to compute the gradient for each term in the summation. This requires solving an MDP, which is where the brunt of the computation lies. Thus, if we are going to go through the trouble of calculating the Q-values in order to calculate the gradient with respect to one state-action pair, we should reuse this computation and compute the full gradient rather than repeatedly taking a step for a single state-action pair which would require repeatedly solving for the Q-values after every mini-batch, giving us a noisier gradient step at a nearly identical cost to the full gradient step.
 
 
 \section{To Do List}
